@@ -14,6 +14,12 @@
     fprintf (stderr, __VA_ARGS__);                                                                 \
   }
 
+static int
+center (const struct hanoi_puzzle *pzl, const int i)
+{
+  return i * (1 + 2 * pzl->n_disks) + (1 + 2 * (pzl->n_disks - 1)) / 2;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -65,6 +71,12 @@ main (int argc, char **argv)
   curs_set (0);
   keypad (stdscr, TRUE);
 
+  const int game_window_width = pzl.n_rods * (2 + (pzl.n_disks - 1) * 2) + 1;
+
+  WINDOW *window_game = newwin (pzl.n_disks, game_window_width, 1, 1);
+  WINDOW *window_select = newwin (1, game_window_width, 0, 1);
+  WINDOW *window_status = newwin (2, 32, pzl.n_disks + 2, 0);
+
   int last_complete_position = hanoi_complete (&pzl);
   int moves = 0;
   int selected_src = 0;
@@ -74,61 +86,64 @@ main (int argc, char **argv)
   while (1)
     {
       clear ();
+      wclear (window_game);
+      wclear (window_select);
+      wclear (window_status);
 
-      mvprintw (pzl.n_disks + 3, 0, "Moves: %d", moves);
+      mvwprintw (window_status, 0, 0, "Moves: %d", moves);
 
       const int32_t current_complete_position = hanoi_complete (&pzl);
 
       if (current_complete_position > -1 && current_complete_position != last_complete_position)
         {
-          mvprintw (pzl.n_disks + 4, 0, "Complete!");
+          mvwprintw (window_status, 1, 0, "Complete!");
           moves = 0;
           last_complete_position = current_complete_position;
         }
 
       if (error_display)
         {
-          mvprintw (pzl.n_disks + 4, 0, error_display);
+          mvwprintw (window_status, 1, 0, error_display);
           error_display = NULL;
         }
 
       for (int i = 0; i < pzl.n_rods; ++i)
         {
-          const int cx = i * (1 + 2 * pzl.n_disks) + (1 + 2 * (pzl.n_disks - 1)) / 2;
+          const int cx = center (&pzl, i);
 
           for (int j = 0; j < pzl.n_disks; ++j)
             {
-              const int y = pzl.n_disks - j;
+              const int y = pzl.n_disks - j - 1;
 
               const uint32_t disk = pzl.state[i][j];
               if (disk == 0)
                 {
-                  mvprintw (y, cx, "|");
+                  mvwaddch (window_game, y, cx, '|');
                 }
               else
                 {
                   for (int x = cx - disk + 1; x < cx + disk; ++x)
                     {
-                      mvprintw (y, x, "O");
+                      mvwaddch (window_game, y, x, 'O');
                     }
                 }
             }
         }
 
-      const int cx_src = selected_src * (1 + 2 * pzl.n_disks) + (1 + 2 * (pzl.n_disks - 1)) / 2;
-
       if (selected_des == -1)
         {
-          mvprintw (0, cx_src, "v");
+          mvwaddch (window_select, 0, center (&pzl, selected_src), 'v');
         }
       else
         {
-          mvprintw (0, cx_src, "+");
-          const int cx_des = selected_des * (1 + 2 * pzl.n_disks) + (1 + 2 * (pzl.n_disks - 1)) / 2;
-          mvprintw (0, cx_des, "V");
+          mvwaddch (window_select, 0, center (&pzl, selected_src), '+');
+          mvwaddch (window_select, 0, center (&pzl, selected_des), 'V');
         }
 
       refresh ();
+      wrefresh (window_game);
+      wrefresh (window_select);
+      wrefresh (window_status);
 
       const int c = getch ();
       if (c == 'q')
@@ -197,8 +212,12 @@ main (int argc, char **argv)
         }
     }
 
+  delwin (window_game);
+  delwin (window_select);
+  delwin (window_status);
   endwin ();
 
   hanoi_free (&pzl);
+
   return 0;
 }
