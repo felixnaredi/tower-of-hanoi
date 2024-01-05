@@ -20,6 +20,22 @@ center (const struct hanoi_puzzle *pzl, const int i)
   return i * (1 + 2 * pzl->n_disks) + (1 + 2 * (pzl->n_disks - 1)) / 2;
 }
 
+static bool
+init_puzzle (struct hanoi_puzzle *pzl, const uint32_t n_rods, const uint32_t n_disks)
+{
+  switch (hanoi_init (pzl, n_rods, n_disks))
+    {
+    case HANOI_INIT_OK:
+      return true;
+    case HANOI_INIT_INVALID_N_RODS_VALUE:
+      error ("Value of `n_rods` may not be 0x%x\n", HANOI_INCOMPLETE);
+      return false;
+    case HANOI_INIT_SYSTEM_ERROR:
+      error ("%s\n", strerror (errno));
+      return false;
+    }
+}
+
 int
 main (int argc, char **argv)
 {
@@ -27,16 +43,15 @@ main (int argc, char **argv)
 
   if (argc == 1)
     {
-      if (hanoi_init (&pzl, 3, 4) != HANOI_OK)
+      if (!init_puzzle (&pzl, 3, 4))
         {
-          error ("%s\n", strerror (errno));
           return 1;
         }
     }
   else if (argc == 3)
     {
       char *end;
-      const int n_rods = strtol (argv[1], &end, 10);
+      const uint32_t n_rods = strtol (argv[1], &end, 10);
 
       if (*end != '\0')
         {
@@ -44,7 +59,7 @@ main (int argc, char **argv)
           return 1;
         }
 
-      const int n_disks = strtol (argv[2], &end, 10);
+      const uint32_t n_disks = strtol (argv[2], &end, 10);
 
       if (*end != '\0')
         {
@@ -52,9 +67,8 @@ main (int argc, char **argv)
           return 1;
         }
 
-      if (hanoi_init (&pzl, n_rods, n_disks) != HANOI_OK)
+      if (!init_puzzle (&pzl, n_rods, n_disks))
         {
-          error ("%s\n", strerror (errno));
           return 1;
         }
     }
@@ -71,7 +85,7 @@ main (int argc, char **argv)
   curs_set (0);
   keypad (stdscr, TRUE);
 
-  const int game_window_width = pzl.n_rods * (2 + (pzl.n_disks - 1) * 2) + 1;
+  const int game_window_width = pzl.n_rods * (1 + pzl.n_disks * 2);
 
   WINDOW *window_game = newwin (pzl.n_disks, game_window_width, 1, 1);
   WINDOW *window_select = newwin (1, game_window_width, 0, 1);
@@ -92,9 +106,10 @@ main (int argc, char **argv)
 
       mvwprintw (window_status, 0, 0, "Moves: %d", moves);
 
-      const int32_t current_complete_position = hanoi_complete (&pzl);
+      const uint32_t current_complete_position = hanoi_complete (&pzl);
 
-      if (current_complete_position > -1 && current_complete_position != last_complete_position)
+      if (current_complete_position != HANOI_INCOMPLETE
+          && current_complete_position != last_complete_position)
         {
           mvwprintw (window_status, 1, 0, "Complete!");
           moves = 0;
@@ -193,15 +208,15 @@ main (int argc, char **argv)
             {
               if (selected_src != selected_des)
                 {
-                  if (hanoi_move (&pzl, selected_src, selected_des) == HANOI_INVALID_MOVE)
-                    {
-                      error_display = "No can do... Invalid move";
-                    }
-                  else
+                  if (hanoi_move (&pzl, selected_src, selected_des))
                     {
                       selected_src = selected_des;
                       selected_des = -1;
                       ++moves;
+                    }
+                  else
+                    {
+                      error_display = "No can do... Invalid move";
                     }
                 }
               else
