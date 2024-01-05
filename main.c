@@ -3,17 +3,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
 #include <ncurses.h>
 
 #include "hanoi.h"
+#include "puzzle_record.h"
 
 #define error(...)                                                                                 \
   {                                                                                                \
     fprintf (stderr, "ERROR %s:%d - ", __FILE__, __LINE__);                                        \
     fprintf (stderr, __VA_ARGS__);                                                                 \
   }
+
+static const char alphabet[]
+    = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+        's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+
+static char recorder_path[] = "records/12345678.hanoi";
+
+static char *
+generate_recorder_path ()
+{
+  for (int i = 8; i < 16; ++i)
+    {
+      recorder_path[i] = alphabet[rand () % (sizeof (alphabet) / sizeof (alphabet[0]))];
+    }
+  return recorder_path;
+}
 
 static int
 center (const struct hanoi_puzzle *pzl, const int i)
@@ -41,6 +59,8 @@ int
 main (int argc, char **argv)
 {
   struct hanoi_puzzle pzl;
+
+  srand (time (NULL));
 
   if (argc == 1)
     {
@@ -80,6 +100,19 @@ main (int argc, char **argv)
       return 1;
     }
 
+  if (mkdir ("records", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST)
+    {
+      error ("%s\n", strerror (errno));
+      return 1;
+    }
+
+  struct hanoi_recorder recorder;
+  if (!hanoi_new_recorder (&recorder, generate_recorder_path (), &pzl))
+    {
+      error ("%s\n", strerror (errno));
+      return 1;
+    }
+
   initscr ();
   raw ();
   noecho ();
@@ -89,9 +122,9 @@ main (int argc, char **argv)
 
   const int game_window_width = pzl.n_rods * (1 + pzl.n_disks * 2);
 
-  WINDOW *window_game = newwin (pzl.n_disks, game_window_width, 1, 1);
-  WINDOW *window_select = newwin (1, game_window_width, 0, 1);
-  WINDOW *window_status = newwin (2, 32, pzl.n_disks + 2, 0);
+  WINDOW *window_game = newwin (pzl.n_disks, game_window_width, 2, 1);
+  WINDOW *window_select = newwin (1, game_window_width, 1, 1);
+  WINDOW *window_status = newwin (2, 32, pzl.n_disks + 3, 0);
 
   int last_complete_position = hanoi_complete (&pzl);
   int moves = 0;
@@ -100,6 +133,7 @@ main (int argc, char **argv)
   char *error_display = NULL;
   uint64_t duration = 0;
   bool active = false;
+  int res;
 
   struct timespec last_time;
 
@@ -112,12 +146,12 @@ main (int argc, char **argv)
         {
           struct timespec time;
           clock_gettime (CLOCK_MONOTONIC, &time);
-          duration += (time.tv_sec - last_time.tv_sec) * 1000000000;
-          duration += (time.tv_nsec - last_time.tv_nsec);
+          duration += (time.tv_sec - last_time.tv_sec) * 1000;
+          duration += (time.tv_nsec - last_time.tv_nsec) / 1000000;
           last_time = time;
 
           wclear (window_status);
-          mvwprintw (window_status, 0, 0, "Time: %.1f", (double)duration / (double)1e9);
+          mvwprintw (window_status, 0, 0, "Time: %.1f", (double)duration / (double)1e3);
           mvwprintw (window_status, 0, 16, "Moves: %d", moves);
         }
 
@@ -132,6 +166,18 @@ main (int argc, char **argv)
           active = false;
           last_complete_position = current_complete_position;
           mvwprintw (window_status, 1, 0, "Complete!");
+
+          hanoi_free_recorder (&recorder);
+
+          if (!hanoi_new_recorder (&recorder, generate_recorder_path (), &pzl))
+            {
+              delwin (window_game);
+              delwin (window_select);
+              delwin (window_status);
+              endwin ();
+              error ("%s\n", strerror (errno));
+              return 1;
+            }
         }
 
       if (error_display)
@@ -239,11 +285,13 @@ main (int argc, char **argv)
                     {
                       if (!active)
                         {
+                          active = true;
+
                           clock_gettime (CLOCK_MONOTONIC, &last_time);
                           moves = 0;
                           duration = 0;
-                          active = true;
                         }
+                      hanoi_push_move (&recorder, selected_src, selected_des, duration);
                       selected_src = selected_des;
                       selected_des = -1;
                       ++moves;
@@ -265,8 +313,16 @@ main (int argc, char **argv)
   delwin (window_select);
   delwin (window_status);
   endwin ();
-
   hanoi_free (&pzl);
+
+  if (!active)
+    {
+      if (remove (recorder_path) == -1)
+        {
+          error ("%s\n", strerror (errno));
+          return 1;
+        }
+    }
 
   return 0;
 }
