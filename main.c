@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <ncurses.h>
 
@@ -82,6 +83,7 @@ main (int argc, char **argv)
   initscr ();
   raw ();
   noecho ();
+  halfdelay (3);
   curs_set (0);
   keypad (stdscr, TRUE);
 
@@ -96,30 +98,45 @@ main (int argc, char **argv)
   int selected_src = 0;
   int selected_des = -1;
   char *error_display = NULL;
+  uint64_t duration = 0;
+  bool active = false;
+
+  struct timespec last_time;
+
+  mvwprintw (window_status, 0, 0, "Time: %.1f", (double)duration / (double)1e9);
+  mvwprintw (window_status, 0, 16, "Moves: %d", moves);
 
   while (1)
     {
-      clear ();
+      if (active)
+        {
+          struct timespec time;
+          clock_gettime (CLOCK_MONOTONIC, &time);
+          duration += (time.tv_sec - last_time.tv_sec) * 1000000000;
+          duration += (time.tv_nsec - last_time.tv_nsec);
+          last_time = time;
+
+          wclear (window_status);
+          mvwprintw (window_status, 0, 0, "Time: %.1f", (double)duration / (double)1e9);
+          mvwprintw (window_status, 0, 16, "Moves: %d", moves);
+        }
+
       wclear (window_game);
       wclear (window_select);
-      wclear (window_status);
-
-      mvwprintw (window_status, 0, 0, "Moves: %d", moves);
 
       const uint32_t current_complete_position = hanoi_complete (&pzl);
 
       if (current_complete_position != HANOI_INCOMPLETE
           && current_complete_position != last_complete_position)
         {
-          mvwprintw (window_status, 1, 0, "Complete!");
-          moves = 0;
+          active = false;
           last_complete_position = current_complete_position;
+          mvwprintw (window_status, 1, 0, "Complete!");
         }
 
       if (error_display)
         {
           mvwprintw (window_status, 1, 0, error_display);
-          error_display = NULL;
         }
 
       for (int i = 0; i < pzl.n_rods; ++i)
@@ -161,12 +178,15 @@ main (int argc, char **argv)
       wrefresh (window_status);
 
       const int c = getch ();
+
       if (c == 'q')
         {
           break;
         }
       else if (c == KEY_LEFT)
         {
+          error_display = NULL;
+
           if (selected_des == -1)
             {
               selected_src += pzl.n_rods - 1;
@@ -180,6 +200,8 @@ main (int argc, char **argv)
         }
       else if (c == KEY_RIGHT)
         {
+          error_display = NULL;
+
           if (selected_des == -1)
             {
               selected_src += 1;
@@ -193,11 +215,16 @@ main (int argc, char **argv)
         }
       else if (c == ' ')
         {
+          error_display = NULL;
+
           if (selected_des == -1)
             {
               if (hanoi_empty_rod (&pzl, selected_src))
                 {
-                  error_display = "No can do... Empty rod";
+                  if (active)
+                    {
+                      error_display = "No can do... Empty rod";
+                    }
                 }
               else
                 {
@@ -210,6 +237,13 @@ main (int argc, char **argv)
                 {
                   if (hanoi_move (&pzl, selected_src, selected_des))
                     {
+                      if (!active)
+                        {
+                          clock_gettime (CLOCK_MONOTONIC, &last_time);
+                          moves = 0;
+                          duration = 0;
+                          active = true;
+                        }
                       selected_src = selected_des;
                       selected_des = -1;
                       ++moves;
