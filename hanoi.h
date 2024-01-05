@@ -28,4 +28,6 @@ hanoi_response_code hanoi_move (struct hanoi_puzzle *pzl, const uint32_t src_i,
 
 bool hanoi_empty_rod (const struct hanoi_puzzle *pzl, const uint32_t i);
 
+uint32_t hanoi_complete (const struct hanoi_puzzle *pzl);
+
 #endif /* HANOI_H */

@@ -98,3 +98,35 @@ hanoi_empty_rod (const struct hanoi_puzzle *pzl, const uint32_t i)
 {
   return pzl->state[i][0] == 0;
 }
+
+uint32_t
+hanoi_complete (const struct hanoi_puzzle *pzl)
+{
+  uint32_t filled_rod = -1;
+
+  for (uint32_t i = 0; i < pzl->n_rods; ++i)
+    {
+      if (!hanoi_empty_rod (pzl, i))
+        {
+          if (filled_rod > -1)
+            {
+              return -1;
+            }
+          else
+            {
+              filled_rod = i;
+              uint32_t j = 0;
+
+              for (; j < pzl->n_disks && pzl->state[i][j] == pzl->n_disks - j; ++j)
+                {
+                }
+              if (j != pzl->n_disks)
+                {
+                  return -1;
+                }
+            }
+        }
+    }
+
+  return filled_rod;
+}

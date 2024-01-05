@@ -65,6 +65,8 @@ main (int argc, char **argv)
   curs_set (0);
   keypad (stdscr, TRUE);
 
+  int last_complete_position = hanoi_complete (&pzl);
+  int moves = 0;
   int selected_src = 0;
   int selected_des = -1;
   char *error_display = NULL;
@@ -73,9 +75,20 @@ main (int argc, char **argv)
     {
       clear ();
 
+      mvprintw (pzl.n_disks + 3, 0, "Moves: %d", moves);
+
+      const int32_t current_complete_position = hanoi_complete (&pzl);
+
+      if (current_complete_position > -1 && current_complete_position != last_complete_position)
+        {
+          mvprintw (pzl.n_disks + 4, 0, "Complete!");
+          moves = 0;
+          last_complete_position = current_complete_position;
+        }
+
       if (error_display)
         {
-          mvprintw (pzl.n_disks + 3, 0, error_display);
+          mvprintw (pzl.n_disks + 4, 0, error_display);
           error_display = NULL;
         }
 
@@ -154,7 +167,7 @@ main (int argc, char **argv)
             {
               if (hanoi_empty_rod (&pzl, selected_src))
                 {
-                  error_display = "Empty rod";
+                  error_display = "No can do... Empty rod";
                 }
               else
                 {
@@ -167,12 +180,13 @@ main (int argc, char **argv)
                 {
                   if (hanoi_move (&pzl, selected_src, selected_des) == HANOI_INVALID_MOVE)
                     {
-                      error_display = "Invalid move";
+                      error_display = "No can do... Invalid move";
                     }
                   else
                     {
                       selected_src = selected_des;
                       selected_des = -1;
+                      ++moves;
                     }
                 }
               else
