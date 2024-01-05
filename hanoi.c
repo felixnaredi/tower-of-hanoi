@@ -14,7 +14,7 @@ hanoi_init (struct hanoi_puzzle *pzl, const uint32_t n_rods, const uint32_t n_di
     }
 
   pzl->state = malloc (sizeof (pzl->state) * n_rods);
-  if (st == NULL)
+  if (pzl->state == NULL)
     {
       free (st);
       return HANOI_ERROR_ABORT;
