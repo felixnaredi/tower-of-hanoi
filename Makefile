@@ -1,4 +1,4 @@
-CFLAGS=-g -Wall
+CFLAGS=-O3 -Wall
 CC=clang
 
 main: main.c hanoi puzzle_record

@@ -95,7 +95,7 @@ main (int argc, char **argv)
 
   struct hanoi_recorder recorder;
 
-  if (!hanoi_new_recorder (&recorder, &pzl, "John Doe"))
+  if (!hanoi_new_recorder (&recorder, &pzl, "John 'The Guy' Doe"))
     {
       error ("%s\n", strerror (errno));
       hanoi_free (&pzl);
@@ -168,7 +168,7 @@ main (int argc, char **argv)
 
           hanoi_free_recorder (&recorder);
 
-          if (!hanoi_new_recorder (&recorder, &pzl, "John Doe"))
+          if (!hanoi_new_recorder (&recorder, &pzl, "Johanna Doe"))
             {
               error ("%s\n", strerror (errno));
               delwin (window_game);
@@ -291,7 +291,7 @@ main (int argc, char **argv)
                           moves = 0;
                           duration = 0;
                         }
-                      hanoi_push_move (&recorder, selected_src, selected_des, duration);
+                      hanoi_recorder_push_move (&recorder, selected_src, selected_des, duration);
                       selected_src = selected_des;
                       selected_des = -1;
                       ++moves;
@@ -317,7 +317,7 @@ main (int argc, char **argv)
 
   if (!active)
     {
-      if (!hanoi_delete_recorder_file (&recorder))
+      if (!hanoi_recorder_remove_file (&recorder))
         {
           hanoi_free_recorder (&recorder);
           error ("%s\n", strerror (errno));

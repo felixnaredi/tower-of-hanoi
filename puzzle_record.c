@@ -124,14 +124,8 @@ hanoi_new_recorder (struct hanoi_recorder *recorder, const struct hanoi_puzzle *
   *HEADER_DATE (buf) = time (NULL);
   strncpy (HEADER_USERNAME (buf), username, MAX_USERNAME_LEN);
 
-  if (write (fd, buf, sizeof (buf)) == -1)
-    {
-      free (recorder->path);
-      close (fd);
-      return false;
-    }
-
-  if (write (fd, pzl->state[0], sizeof (pzl->state[0][0]) * pzl->n_rods * pzl->n_disks) == -1)
+  if (!(write (fd, buf, sizeof (buf)) != -1
+        && write (fd, pzl->state[0], sizeof (pzl->state[0][0]) * pzl->n_rods * pzl->n_disks) != -1))
     {
       free (recorder->path);
       close (fd);
@@ -149,19 +143,18 @@ hanoi_free_recorder (struct hanoi_recorder *recorder)
 }
 
 bool
-hanoi_delete_recorder_file (struct hanoi_recorder *recorder)
+hanoi_recorder_remove_file (struct hanoi_recorder *recorder)
 {
   return remove (recorder->path) != -1;
 }
 
 bool
-hanoi_push_move (struct hanoi_recorder *recorder, const uint32_t src_i, const uint32_t des_i,
+hanoi_recorder_push_move (struct hanoi_recorder *recorder, const uint32_t src_i, const uint32_t des_i,
                  const uint64_t duration)
 {
-  const uint32_t buf[] = { src_i, des_i };
+  const uint32_t buf[] = { src_i, des_i, ((uint32_t *)&duration)[0], ((uint32_t *)&duration)[1] };
 
-  if (!(lseek (recorder->fd, 0, SEEK_END) != -1 && write (recorder->fd, buf, sizeof (buf)) != -1
-        && write (recorder->fd, &duration, sizeof (duration)) == -1))
+  if (!(lseek (recorder->fd, 0, SEEK_END) != -1 && write (recorder->fd, buf, sizeof (buf)) != -1))
     {
       return false;
     }

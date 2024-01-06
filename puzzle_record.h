@@ -21,13 +21,13 @@ hanoi_new_recorder (struct hanoi_recorder *recorder, const struct hanoi_puzzle *
                     const char *username);
 
 bool
-hanoi_delete_recorder_file (struct hanoi_recorder *recorder);
+hanoi_recorder_remove_file (struct hanoi_recorder *recorder);
 
 void
 hanoi_free_recorder (struct hanoi_recorder *recorder);
 
 bool
-hanoi_push_move (struct hanoi_recorder *recorder, const uint32_t src_i, const uint32_t des_i,
+hanoi_recorder_push_move (struct hanoi_recorder *recorder, const uint32_t src_i, const uint32_t des_i,
                  const uint64_t duration);
 
 bool
