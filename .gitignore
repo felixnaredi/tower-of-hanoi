@@ -2,6 +2,7 @@ env/
 .vscode
 .DS_Store
 build/
+*.dSYM
 
 records/
 local/

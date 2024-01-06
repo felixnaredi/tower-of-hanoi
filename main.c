@@ -95,7 +95,7 @@ main (int argc, char **argv)
 
   struct hanoi_recorder recorder;
 
-  if (!hanoi_new_recorder (&recorder, &pzl))
+  if (!hanoi_new_recorder (&recorder, &pzl, "John Doe"))
     {
       error ("%s\n", strerror (errno));
       hanoi_free (&pzl);
@@ -155,9 +155,20 @@ main (int argc, char **argv)
           last_complete_position = current_complete_position;
           mvwprintw (window_status, 1, 0, "Complete!");
 
+          if (!hanoi_recorder_write_checksum (&recorder))
+            {
+              error ("%s\n", strerror (errno));
+              delwin (window_game);
+              delwin (window_select);
+              delwin (window_status);
+              endwin ();
+              hanoi_free (&pzl);
+              return 1;
+            }
+
           hanoi_free_recorder (&recorder);
 
-          if (!hanoi_new_recorder (&recorder, &pzl))
+          if (!hanoi_new_recorder (&recorder, &pzl, "John Doe"))
             {
               error ("%s\n", strerror (errno));
               delwin (window_game);

@@ -1,4 +1,4 @@
-CFLAGS=-O3
+CFLAGS=-g -Wall
 CC=clang
 
 main: main.c hanoi puzzle_record
@@ -11,4 +11,4 @@ puzzle_record: puzzle_record.c
 	${CC} ${CFLAGS} -c puzzle_record.c
 
 clean:
-	rm -rf hanoi.o puzzle_record.o hanoi
+	rm -rf hanoi.o puzzle_record.o hanoi *.dSYM
