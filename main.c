@@ -87,6 +87,7 @@ main (int argc, char **argv)
   if (mkdir ("records", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST)
     {
       error ("%s\n", strerror (errno));
+      hanoi_free (&pzl);
       return 1;
     }
 
@@ -97,6 +98,7 @@ main (int argc, char **argv)
   if (!hanoi_new_recorder (&recorder, &pzl))
     {
       error ("%s\n", strerror (errno));
+      hanoi_free (&pzl);
       return 1;
     }
 
@@ -157,11 +159,12 @@ main (int argc, char **argv)
 
           if (!hanoi_new_recorder (&recorder, &pzl))
             {
+              error ("%s\n", strerror (errno));
               delwin (window_game);
               delwin (window_select);
               delwin (window_status);
               endwin ();
-              error ("%s\n", strerror (errno));
+              hanoi_free (&pzl);
               return 1;
             }
         }
