@@ -10,11 +10,17 @@ struct hanoi_recorder
 {
   int fd;
   uint64_t moves;
+  char *path;
 };
 
+void
+hanoi_set_records_directory (const char *path);
+
 bool
-hanoi_new_recorder (struct hanoi_recorder *recorder, const char *path,
-                    const struct hanoi_puzzle *pzl);
+hanoi_new_recorder (struct hanoi_recorder *recorder, const struct hanoi_puzzle *pzl);
+
+bool
+hanoi_delete_recorder_file (struct hanoi_recorder *recorder);
 
 void
 hanoi_free_recorder (struct hanoi_recorder *recorder);

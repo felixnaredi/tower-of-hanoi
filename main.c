@@ -17,22 +17,6 @@
     fprintf (stderr, __VA_ARGS__);                                                                 \
   }
 
-static const char alphabet[]
-    = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-        's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
-
-static char recorder_path[] = "records/12345678.hanoi";
-
-static char *
-generate_recorder_path ()
-{
-  for (int i = 8; i < 16; ++i)
-    {
-      recorder_path[i] = alphabet[rand () % (sizeof (alphabet) / sizeof (alphabet[0]))];
-    }
-  return recorder_path;
-}
-
 static int
 center (const struct hanoi_puzzle *pzl, const int i)
 {
@@ -106,8 +90,11 @@ main (int argc, char **argv)
       return 1;
     }
 
+  hanoi_set_records_directory ("records");
+
   struct hanoi_recorder recorder;
-  if (!hanoi_new_recorder (&recorder, generate_recorder_path (), &pzl))
+
+  if (!hanoi_new_recorder (&recorder, &pzl))
     {
       error ("%s\n", strerror (errno));
       return 1;
@@ -133,7 +120,6 @@ main (int argc, char **argv)
   char *error_display = NULL;
   uint64_t duration = 0;
   bool active = false;
-  int res;
 
   struct timespec last_time;
 
@@ -169,7 +155,7 @@ main (int argc, char **argv)
 
           hanoi_free_recorder (&recorder);
 
-          if (!hanoi_new_recorder (&recorder, generate_recorder_path (), &pzl))
+          if (!hanoi_new_recorder (&recorder, &pzl))
             {
               delwin (window_game);
               delwin (window_select);
@@ -317,12 +303,14 @@ main (int argc, char **argv)
 
   if (!active)
     {
-      if (remove (recorder_path) == -1)
+      if (!hanoi_delete_recorder_file (&recorder))
         {
+          hanoi_free_recorder (&recorder);
           error ("%s\n", strerror (errno));
           return 1;
         }
     }
+  hanoi_free_recorder (&recorder);
 
   return 0;
 }
