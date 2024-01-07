@@ -39,49 +39,72 @@ init_puzzle (struct hanoi_puzzle *pzl, const uint32_t n_rods, const uint32_t n_d
     }
 }
 
+static void
+print_help (const char *program)
+{
+  printf ("usage: %s\n", program);
+  printf ("    [ --size=<rods,disks> ]\n");
+  printf ("    [ --username=<name> ]\n");
+  printf ("    [ --help ]\n");
+}
+
 int
 main (int argc, char **argv)
 {
-  struct hanoi_puzzle pzl;
-
   srand (time (NULL));
 
-  if (argc == 1)
+  struct hanoi_puzzle pzl;
+  bool puzzle_is_initialized = false;
+  char username[32];
+
+  strncpy (username, "John Doe", sizeof (username));
+
+  for (int i = 1; i < argc; ++i)
+    {
+      uint32_t n_rods;
+      uint32_t n_disks;
+
+      if (sscanf (argv[i], "--size=%u,%u", &n_rods, &n_disks))
+        {
+          if (puzzle_is_initialized)
+            {
+              hanoi_free (&pzl);
+            }
+
+          if (!init_puzzle (&pzl, n_rods, n_disks))
+            {
+              return 1;
+            }
+          puzzle_is_initialized = true;
+        }
+      else if (sscanf (argv[i], "--username=%31s", username))
+        {
+        }
+      else if (sscanf (argv[i], "--help"))
+        {
+          print_help (argv[0]);
+          return 0;
+        }
+      else
+        {
+          error ("unknown option '%s'\n", argv[i]);
+          print_help (argv[0]);
+
+          if (puzzle_is_initialized)
+            {
+              hanoi_free (&pzl);
+            }
+
+          return 1;
+        }
+    }
+
+  if (!puzzle_is_initialized)
     {
       if (!init_puzzle (&pzl, 3, 4))
         {
-          return 1;
+          return -1;
         }
-    }
-  else if (argc == 3)
-    {
-      char *end;
-      const uint32_t n_rods = strtol (argv[1], &end, 10);
-
-      if (*end != '\0')
-        {
-          error ("invalid numeric value '%s'\n", argv[1]);
-          return 1;
-        }
-
-      const uint32_t n_disks = strtol (argv[2], &end, 10);
-
-      if (*end != '\0')
-        {
-          error ("invalid numeric value '%s'\n", argv[2]);
-          return 1;
-        }
-
-      if (!init_puzzle (&pzl, n_rods, n_disks))
-        {
-          return 1;
-        }
-    }
-  else
-    {
-      printf ("Usage: %s <RODS> <DISKS>\n", argv[0]);
-      printf ("Default: %s 3 4\n", argv[0]);
-      return 1;
     }
 
   if (mkdir ("records", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST)
@@ -95,7 +118,7 @@ main (int argc, char **argv)
 
   struct hanoi_recorder recorder;
 
-  if (!hanoi_new_recorder (&recorder, &pzl, "John 'The Guy' Doe"))
+  if (!hanoi_new_recorder (&recorder, &pzl, username))
     {
       error ("%s\n", strerror (errno));
       hanoi_free (&pzl);
@@ -168,7 +191,7 @@ main (int argc, char **argv)
 
           hanoi_free_recorder (&recorder);
 
-          if (!hanoi_new_recorder (&recorder, &pzl, "Johanna Doe"))
+          if (!hanoi_new_recorder (&recorder, &pzl, username))
             {
               error ("%s\n", strerror (errno));
               delwin (window_game);
