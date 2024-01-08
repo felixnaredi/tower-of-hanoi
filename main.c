@@ -9,7 +9,7 @@
 #include <ncurses.h>
 
 #include "hanoi.h"
-#include "puzzle_record.h"
+#include "record.h"
 
 #define error(...)                                                                                 \
   {                                                                                                \

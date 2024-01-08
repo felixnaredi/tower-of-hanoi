@@ -1,14 +1,14 @@
 CFLAGS=-O3 -Wall
 CC=clang
 
-main: main.c hanoi puzzle_record
-	${CC} ${CFLAGS} -lncurses hanoi.o puzzle_record.o main.c -o hanoi
+main: main.c hanoi record
+	${CC} ${CFLAGS} -lncurses hanoi.o record.o main.c -o hanoi
 
 hanoi: hanoi.c
 	${CC} ${CFLAGS} -c hanoi.c
 
-puzzle_record: puzzle_record.c
-	${CC} ${CFLAGS} -c puzzle_record.c
+record: record.c
+	${CC} ${CFLAGS} -c record.c
 
 clean:
-	rm -rf hanoi.o puzzle_record.o hanoi *.dSYM
+	rm -rf hanoi.o record.o hanoi *.dSYM

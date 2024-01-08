@@ -1,5 +1,5 @@
-#ifndef PUZZLE_RECORD_H
-#define PUZZLE_RECORD_H
+#ifndef RECORD_H
+#define RECORD_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -33,4 +33,4 @@ hanoi_recorder_push_move (struct hanoi_recorder *recorder, const uint32_t src_i,
 bool
 hanoi_recorder_write_checksum (struct hanoi_recorder *recorder);
 
-#endif /* PUZZLE_RECORD_H */
+#endif /* RECORD_H */

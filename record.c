@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "hanoi.h"
-#include "puzzle_record.h"
+#include "record.h"
 
 #define FILENAME_LEN 12
 #define MAX_USERNAME_LEN 32
@@ -17,13 +17,25 @@
   (sizeof (uint64_t) + sizeof (uint64_t) + sizeof (uint32_t) + sizeof (uint32_t)                   \
    + sizeof (uint64_t) + MAX_USERNAME_LEN)
 
-#define HEADER_CHECKSUM(h) ((uint64_t *)&h[0])
-#define HEADER_MOVES(h) ((uint64_t *)&h[8])
-#define HEADER_N_RODS(h) ((uint32_t *)&h[16])
-#define HEADER_N_DISKS(h) ((uint32_t *)&h[20])
-#define HEADER_DATE(h) ((uint64_t *)&h[24])
-#define HEADER_USERNAME(h) ((char *)&h[32])
-#define HEADER_PUZZLE(h) ((uint32_t *)&h[64])
+/* clang-format off */
+
+static uint64_t * header_checksum (uint8_t *header) { return (uint64_t *)&header[0]; }
+static uint64_t * header_moves    (uint8_t *header) { return (uint64_t *)&header[8]; }
+static uint32_t * header_n_rods   (uint8_t *header) { return (uint32_t *)&header[16]; }
+static uint32_t * header_n_disks  (uint8_t *header) { return (uint32_t *)&header[20]; }
+static uint64_t * header_date     (uint8_t *header) { return (uint64_t *)&header[24]; }
+static char     * header_username (uint8_t *header) { return (char *)&header[32]; }
+// static uint32_t * header_puzzle   (uint8_t *header) { return (uint32_t *)&header[64]; }
+
+// static const uint64_t * header_const_checksum (const uint8_t *header) { return (const uint64_t *)&header[0]; }
+static const uint64_t * header_const_moves    (const uint8_t *header) { return (const uint64_t *)&header[8]; }
+static const uint32_t * header_const_n_rods   (const uint8_t *header) { return (const uint32_t *)&header[16]; }
+static const uint32_t * header_const_n_disks  (const uint8_t *header) { return (const uint32_t *)&header[20]; }
+// static const uint64_t * header_const_date     (const uint8_t *header) { return (const uint64_t *)&header[24]; }
+// static const char     * header_const_username (const uint8_t *header) { return (const char *)&header[32]; }
+// static const uint32_t * header_const_puzzle   (const uint8_t *header) { return (const uint32_t *)&header[64]; }
+
+/* clang-format on */
 
 static const char alphabet[]
     = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
@@ -82,8 +94,7 @@ hanoi_set_records_directory (const char *path)
     {
       recorder_path = malloc (len + 1 + FILENAME_LEN + strlen (".hanoi-puzzle"));
       strcpy (recorder_path, path);
-      recorder_path[len] = '/';
-      ++len;
+      recorder_path[len++] = '/';
     }
 
   for (int i = len; i < len + FILENAME_LEN; ++i)
@@ -117,12 +128,12 @@ hanoi_new_recorder (struct hanoi_recorder *recorder, const struct hanoi_puzzle *
 
   uint8_t buf[HEADER_SIZE];
 
-  *HEADER_CHECKSUM (buf) = 0;
-  *HEADER_MOVES (buf) = recorder->moves;
-  *HEADER_N_RODS (buf) = pzl->n_rods;
-  *HEADER_N_DISKS (buf) = pzl->n_disks;
-  *HEADER_DATE (buf) = time (NULL);
-  strncpy (HEADER_USERNAME (buf), username, MAX_USERNAME_LEN);
+  *header_checksum (buf) = 0;
+  *header_moves (buf) = recorder->moves;
+  *header_n_rods (buf) = pzl->n_rods;
+  *header_n_disks (buf) = pzl->n_disks;
+  *header_date (buf) = time (NULL);
+  strncpy (header_username (buf), username, MAX_USERNAME_LEN);
 
   if (!(write (fd, buf, sizeof (buf)) != -1
         && write (fd, pzl->state[0], sizeof (pzl->state[0][0]) * pzl->n_rods * pzl->n_disks) != -1))
@@ -149,8 +160,8 @@ hanoi_recorder_remove_file (struct hanoi_recorder *recorder)
 }
 
 bool
-hanoi_recorder_push_move (struct hanoi_recorder *recorder, const uint32_t src_i, const uint32_t des_i,
-                 const uint64_t duration)
+hanoi_recorder_push_move (struct hanoi_recorder *recorder, const uint32_t src_i,
+                          const uint32_t des_i, const uint64_t duration)
 {
   const uint32_t buf[] = { src_i, des_i, ((uint32_t *)&duration)[0], ((uint32_t *)&duration)[1] };
 
@@ -184,10 +195,10 @@ hanoi_recorder_write_checksum (struct hanoi_recorder *recorder)
   uint64_t checksum = 142573;
   checksum = djb2 (checksum, (header + 8), HEADER_SIZE - 8);
 
-  uint8_t buf[512];
+  size_t len = *header_const_n_rods (header) * *header_const_n_disks (header) * sizeof (uint32_t)
+               + *header_const_moves (header) * sizeof (uint32_t) * 2;
 
-  size_t len = *HEADER_N_RODS (header) * *HEADER_N_DISKS (header) * sizeof (uint32_t)
-               + *HEADER_MOVES (header) * sizeof (uint32_t) * 2;
+  uint8_t buf[512];
 
   while (true)
     {
